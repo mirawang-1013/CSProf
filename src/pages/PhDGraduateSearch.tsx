@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { SearchInterface, type ViewMode, type SearchFilters } from '../components/SearchInterface';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SearchInterface, type SearchFilters } from '../components/SearchInterface';
 import { UniversityList } from '../components/UniversityList';
 import { CandidateProfile } from '../components/CandidateProfile';
-import { mockUniversities, filterCandidates, type Candidate } from '../data/mockData';
+import type { Candidate } from '../data/mockData';
+import { fetchUniversitiesWithCandidates, type SearchFilters as DBSearchFilters } from '../api/research';
 
 export default function PhDGraduateSearch() {
   const [filters, setFilters] = useState<SearchFilters>({
@@ -14,17 +15,16 @@ export default function PhDGraduateSearch() {
     topPercentile: 0
   });
   
-  const [filteredUniversities, setFilteredUniversities] = useState(mockUniversities);
+  const [filteredUniversities, setFilteredUniversities] = useState<any[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
 
-  const handleSearch = useCallback((preserveSelection: boolean = false) => {
-    const filtered = filterCandidates(mockUniversities, filters);
-    setFilteredUniversities(filtered);
-    
-    // Only clear selection if not preserving it, or if the selected candidate is not in the filtered results
+  const handleSearch = useCallback(async (preserveSelection: boolean = false) => {
+    const dbUniversities = await fetchUniversitiesWithCandidates(filters as unknown as DBSearchFilters);
+    setFilteredUniversities(dbUniversities);
+
     if (!preserveSelection) {
       if (selectedCandidate) {
-        const candidateStillExists = filtered.some(uni => 
+        const candidateStillExists = dbUniversities.some(uni => 
           uni.candidates.some(candidate => candidate.id === selectedCandidate.id)
         );
         if (!candidateStillExists) {
@@ -37,8 +37,6 @@ export default function PhDGraduateSearch() {
   const handlePercentileChange = useCallback((percentile: number) => {
     const newFilters = { ...filters, topPercentile: percentile };
     setFilters(newFilters);
-    const filtered = filterCandidates(mockUniversities, newFilters);
-    setFilteredUniversities(filtered);
   }, [filters]);
 
   // Initial load

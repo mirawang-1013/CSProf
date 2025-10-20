@@ -240,7 +240,10 @@ export function KeywordHeatmap({ data, universities, timePeriod }: KeywordHeatma
           <div className="overflow-x-auto">
             <div className="min-w-max">
               {/* Header with years */}
-              <div className="grid grid-cols-[200px_repeat(var(--years),1fr)] gap-1 mb-2" style={{'--years': years.length} as any}>
+              <div
+                className="mb-2"
+                style={{ display: 'grid', gridTemplateColumns: `200px repeat(${years.length}, 1fr)`, gap: '0.25rem' }}
+              >
                 <div className="text-sm font-medium">Research Area</div>
                 {years.map(year => (
                   <div key={year} className="text-sm font-medium text-center px-2">
@@ -253,7 +256,10 @@ export function KeywordHeatmap({ data, universities, timePeriod }: KeywordHeatma
               <TooltipProvider>
                 <div className="space-y-1">
                   {topics.map(topic => (
-                    <div key={topic} className="grid grid-cols-[200px_repeat(var(--years),1fr)] gap-1" style={{'--years': years.length} as any}>
+                    <div
+                      key={topic}
+                      style={{ display: 'grid', gridTemplateColumns: `200px repeat(${years.length}, 1fr)`, gap: '0.25rem' }}
+                    >
                       <div className="text-sm truncate pr-2" title={topic}>
                         {topic}
                       </div>
