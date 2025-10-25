@@ -1,3 +1,4 @@
+import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface TimePeriodSelectorProps {
@@ -5,13 +6,26 @@ interface TimePeriodSelectorProps {
   onPeriodChange: (period: string) => void;
 }
 
-const timePeriods = [
-  { value: '2020-2024', label: '2020-2024' },
-  { value: '2019-2023', label: '2019-2023' },
-  { value: '2018-2022', label: '2018-2022' },
-  { value: '2017-2021', label: '2017-2021' },
-  { value: '2016-2020', label: '2016-2020' },
-];
+// Generate 2-year periods from 2024-2025 backwards
+const generateTimePeriods = (): Array<{ value: string; label: string }> => {
+  const periods: Array<{ value: string; label: string }> = [];
+  
+  // Start from 2024-2025, go backwards in 2-year increments
+  for (let i = 0; i < 8; i++) {
+    const endYear = 2025 - (i * 2);
+    const beginYear = endYear - 1;
+    if (beginYear >= 2018) { // Stop at 2018-2019
+      periods.push({
+        value: `${beginYear}-${endYear}`,
+        label: `${beginYear}-${endYear}`
+      });
+    }
+  }
+  
+  return periods;
+};
+
+const timePeriods = generateTimePeriods();
 
 export function TimePeriodSelector({ selectedPeriod, onPeriodChange }: TimePeriodSelectorProps) {
   return (

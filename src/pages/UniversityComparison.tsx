@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UniversityInput } from '../components/UniversityInput';
 import { TimePeriodSelector } from '../components/TimePeriodSelector';
 import { UniversityCard } from '../components/UniversityCard';
@@ -20,7 +20,7 @@ import type { AcademicData, ConferenceData, HeatmapData, EmergingTopicData } fro
 export default function UniversityComparison() {
   const [universities, setUniversities] = useState<string[]>(sampleUniversities.slice(0, 3));
   const [selectedUniversity, setSelectedUniversity] = useState<string>(sampleUniversities[0]);
-  const [timePeriod, setTimePeriod] = useState<string>('2020-2024');
+  const [timePeriod, setTimePeriod] = useState<string>('2024-2025');
   
   // Data state
   const [academicData, setAcademicData] = useState<AcademicData[]>([]);
