@@ -20,6 +20,7 @@ export interface UICandidate {
   advisor: string;
   researchAreas: string[];
   publications: any[];
+  publicationCount?: number; // Number of publications
   totalCitations: number;
   hIndex: number;
   graduationYear: number;
@@ -80,6 +81,24 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
     return [];
   }
 
+  // Get publication counts for all candidates
+  const candidateIds = (data || []).map(row => row.id);
+  const publicationCounts: Record<string, number> = {};
+  
+  if (candidateIds.length > 0) {
+    const { data: pubData } = await supabase
+      .from("publications")
+      .select("candidate_id")
+      .in("candidate_id", candidateIds);
+    
+    // Count publications per candidate
+    if (pubData) {
+      pubData.forEach(pub => {
+        publicationCounts[pub.candidate_id] = (publicationCounts[pub.candidate_id] || 0) + 1;
+      });
+    }
+  }
+
   // Group by university
   const uniIdToUniversity: Record<string, UIUniversity> = {};
 
@@ -97,12 +116,12 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
       };
     }
 
-    const publications: any[] = [];
+    const publicationCount = publicationCounts[row.id] || 0;
 
     // Create simple radar data based on available metrics
     const overallCitations = Math.min(100, (row.total_citations ?? 0) / 20);
-    const publicationVolume = Math.min(100, publications.length * 10);
-    const topVenuePresence = Math.min(100, publications.filter((p) => p.venue && /ICML|NeurIPS|ICLR|CVPR|ACL|EMNLP|AAAI/i.test(p.venue)).length * 20);
+    const publicationVolume = Math.min(100, publicationCount * 10);
+    const topVenuePresence = Math.min(100, Math.round(publicationCount * 0.3)); // Approximate top venue presence
     const firstAuthorImpact = Math.min(100, Math.round((row.h_index ?? 0) * 5));
     const hotTopicCitations = Math.min(100, Math.round((row.total_citations ?? 0) * 0.1));
 
@@ -141,7 +160,8 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
       department: "Computer Science",
       advisor: "",
       researchAreas: Array.isArray(row.research_interests) ? row.research_interests : [],
-      publications,
+      publications: [], // Empty array for now
+      publicationCount: publicationCount, // Actual count from database
       totalCitations: row.total_citations ?? 0,
       hIndex: row.h_index ?? 0,
       graduationYear: row.graduation_year,
