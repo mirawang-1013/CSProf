@@ -63,7 +63,9 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
 
   if (filters.searchQuery) {
     const q = filters.searchQuery.trim();
-    // ilike on name; university will be filtered client-side from joined result
+    // Search by name OR research interests
+    // Note: Supabase doesn't support OR directly in filters, so we'll search name first
+    // and then client-side filter can handle research interests
     query = query.ilike("name", `%${q}%`);
   }
 
@@ -82,7 +84,7 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
   const uniIdToUniversity: Record<string, UIUniversity> = {};
 
   for (const row of data || []) {
-    const uni = row.universities as { id: string; name: string; country: string; ranking: number | null } | null;
+    const uni = (row.universities as any) as { id: string; name: string; country: string; ranking: number | null } | null;
     if (!uni) continue;
 
     if (!uniIdToUniversity[uni.id]) {
@@ -157,8 +159,14 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
   const search = filters.searchQuery.trim().toLowerCase();
   let universities = Object.values(uniIdToUniversity);
   if (search) {
-    universities = universities.filter(
-      (u) => u.name.toLowerCase().includes(search) || u.candidates.some((c) => c.name.toLowerCase().includes(search))
+    universities = universities.map(u => ({
+      ...u,
+      candidates: u.candidates.filter((c) => 
+        c.name.toLowerCase().includes(search) ||
+        c.researchAreas.some(area => area.toLowerCase().includes(search))
+      )
+    })).filter(
+      (u) => u.name.toLowerCase().includes(search) || u.candidates.length > 0
     );
   }
 

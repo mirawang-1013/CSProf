@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -94,18 +94,8 @@ export function UniversityList({
     }))
   ).sort((a, b) => b.rankingScore - a.rankingScore);
 
-  // Apply top percentile filtering for ranking view
-  const getFilteredCandidates = () => {
-    if (viewMode !== 'by-ranking' || topPercentile === 0) {
-      return allCandidates;
-    }
-    
-    const totalCandidates = allCandidates.length;
-    const cutoffIndex = Math.ceil((topPercentile / 100) * totalCandidates);
-    return allCandidates.slice(0, cutoffIndex);
-  };
-
-  const filteredCandidates = getFilteredCandidates();
+  // Return all candidates without filtering
+  const filteredCandidates = allCandidates;
 
   const renderCandidateCard = (candidate: any, index?: number) => {
     const isTopTier = index !== undefined && index < 3;
