@@ -44,7 +44,9 @@ CREATE TABLE candidates (
 -- 4. Publications table
 CREATE TABLE publications (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    paper_id VARCHAR(255),
     candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    topic_id VARCHAR(255),
     title TEXT NOT NULL,
     venue VARCHAR(255) NOT NULL,
     year INTEGER NOT NULL,
@@ -83,6 +85,7 @@ CREATE INDEX idx_candidates_university_id ON candidates(university_id);
 CREATE INDEX idx_candidates_graduation_year ON candidates(graduation_year);
 CREATE INDEX idx_candidates_citations ON candidates(total_citations);
 CREATE INDEX idx_publications_candidate_id ON publications(candidate_id);
+CREATE INDEX idx_publications_paper_id ON publications(paper_id);
 CREATE INDEX idx_publications_year ON publications(year);
 CREATE INDEX idx_publications_citations ON publications(citations);
 CREATE INDEX idx_academic_metrics_university_year ON academic_metrics(university_id, year);

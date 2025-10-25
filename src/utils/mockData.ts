@@ -199,8 +199,8 @@ export function generateEmergingTopicsData(universities: string[]): EmergingTopi
 
 export const sampleUniversities = [
   'Stanford University',
-  'MIT',
-  'Harvard University',
-  'UC Berkeley',
-  'Carnegie Mellon University'
+  'Massachusetts Institute of Technology',
+  'University of California, Berkeley',
+  'Carnegie Mellon University',
+  'University of Washington'
 ];
