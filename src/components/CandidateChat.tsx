@@ -92,6 +92,9 @@ export function CandidateChat({ candidate }: CandidateChatProps) {
     
     // Publication quality questions
     if (lowerQuestion.includes('publication') || lowerQuestion.includes('venue') || lowerQuestion.includes('conference') || lowerQuestion.includes('journal')) {
+      if (candidate.publications.length === 0) {
+        return `${candidate.name} is still building their publication record, and we don't have specific papers on file yet. Their profile emphasizes ${candidate.researchAreas.join(', ')} and ${candidate.totalCitations} total citations so far.`;
+      }
       const topPub = candidate.publications.reduce((prev, current) => 
         (prev.citations > current.citations) ? prev : current
       );
@@ -123,6 +126,9 @@ export function CandidateChat({ candidate }: CandidateChatProps) {
     
     // Citation/metrics questions
     if (lowerQuestion.includes('citation') || lowerQuestion.includes('metric') || lowerQuestion.includes('impact') || lowerQuestion.includes('h-index')) {
+      if (candidate.publications.length === 0) {
+        return `${candidate.name} currently has ${candidate.totalCitations} total citations and an h-index of ${candidate.hIndex}. As new publications are recorded, we'll be able to share more detailed citation averages.`;
+      }
       const avgCitations = Math.round(candidate.totalCitations / candidate.publications.length);
       return `${candidate.name} has strong research metrics: ${candidate.totalCitations} total citations (${avgCitations} avg per paper), h-index of ${candidate.hIndex}. ${candidate.analysis.scoreExplanation.breakdown.citations.explanation} This places them in the ${candidate.rankingScore >= 85 ? 'top tier' : candidate.rankingScore >= 70 ? 'strong' : 'solid'} category of PhD graduates.`;
     }

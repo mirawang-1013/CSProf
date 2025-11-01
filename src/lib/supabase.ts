@@ -40,9 +40,11 @@ export interface Publication {
   id: string
   candidate_id: string
   title: string
+  authors: string[]
   venue: string
   year: number
   citations: number
+  type?: 'conference' | 'journal' | 'workshop'
   doi?: string
   abstract?: string
   created_at: string

@@ -1,3 +1,4 @@
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
@@ -33,6 +34,7 @@ interface Candidate {
     value: number;
     fullMark: number;
   }[];
+  rankingScore: number;
   analysis: {
     bio: string;
     researchSummary: string;
@@ -358,7 +360,7 @@ export function CandidateProfile({ candidate }: CandidateProfileProps) {
                   </div>
                   <div className="bg-slate-50/50 rounded-lg p-4 border border-slate-200/50 text-center">
                     <div className="text-2xl font-bold text-slate-800 mb-1">
-                      {Math.round(candidate.totalCitations / candidate.publications.length)}
+                      {candidate.publications.length > 0 ? Math.round(candidate.totalCitations / candidate.publications.length) : 0}
                     </div>
                     <div className="text-xs text-slate-500 uppercase tracking-wide">Avg Citations</div>
                   </div>
@@ -527,9 +529,9 @@ export function CandidateProfile({ candidate }: CandidateProfileProps) {
                       </div>
                     </div>
                     
-                    <div className="text-sm text-slate-600">
+                    {/* <div className="text-sm text-slate-600">
                       <span className="font-medium">Authors:</span> {pub.authors.join(', ')}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
