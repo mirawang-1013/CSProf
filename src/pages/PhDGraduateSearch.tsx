@@ -18,12 +18,16 @@ export default function PhDGraduateSearch() {
   const [filteredUniversities, setFilteredUniversities] = useState<any[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
 
+  
   /** 主搜索函数 */
   const handleSearch = useCallback(
     async (preserveSelection: boolean = false) => {
       try {
         const dbUniversities = await fetchUniversitiesWithCandidates(filters as unknown as DBSearchFilters);
         setFilteredUniversities(dbUniversities);
+
+        console.log('Fetched universities:', dbUniversities);
+        console.log('Total candidates:', dbUniversities.reduce((sum, u) => sum + u.candidates.length, 0));
 
         // 若未选择保留，则检查当前选中的候选人是否仍在结果中
         if (!preserveSelection && selectedCandidate) {
@@ -38,6 +42,8 @@ export default function PhDGraduateSearch() {
     },
     [filters, selectedCandidate]
   );
+
+
 
   const handlePercentileChange = useCallback(
     (percentile: number) => {
