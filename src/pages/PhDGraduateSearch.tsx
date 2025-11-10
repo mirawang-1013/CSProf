@@ -8,7 +8,7 @@ import { fetchUniversitiesWithCandidates, type SearchFilters as DBSearchFilters 
 export default function PhDGraduateSearch() {
   const [filters, setFilters] = useState<SearchFilters>({
     searchQuery: '',
-    yearRange: { start: 2020, end: 2024 },
+    yearRange: { start: 2010, end: 2030 },
     minCitations: 0,
     selectedTopics: [],
     viewMode: 'by-university',

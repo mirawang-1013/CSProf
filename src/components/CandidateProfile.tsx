@@ -219,23 +219,23 @@ export function CandidateProfile({ candidate }: CandidateProfileProps) {
                         
                         if (dimension.subject === 'Publication Volume') {
                           componentData = componentScores.publications;
-                          weight = '25%';
+                          weight = '10%';
                           explanation = `${candidate.publications.length} publications scores ${Math.round(dimension.value)}/100. ${componentData.explanation}`;
                         } else if (dimension.subject === 'First Author Impact') {
                           componentData = componentScores.impact;
-                          weight = '15%';
+                          weight = '5%';
                           explanation = `First-author citations and venue quality scores ${Math.round(dimension.value)}/100. ${componentData.explanation}`;
                         } else if (dimension.subject === 'Top Venue Presence') {
-                          weight = '20%';
+                          weight = '10%';
                           const topVenues = candidate.publications.filter(p => ['ICML', 'NeurIPS', 'ICLR', 'AAAI', 'IJCAI', 'CVPR', 'ICCV', 'ECCV', 'ACL', 'EMNLP'].some(conf => p.venue.includes(conf))).length;
                           explanation = `${topVenues} papers in top-tier venues (ICML, NeurIPS, etc.) scores ${Math.round(dimension.value)}/100.`;
                         } else if (dimension.subject === 'Hot Topic Citations') {
-                          weight = '15%';
+                          weight = '25%';
                           const hotTopicCites = Math.ceil(candidate.totalCitations * 0.25);
                           explanation = `${hotTopicCites} citations on trending topics (ML, DL, CV, NLP) scores ${Math.round(dimension.value)}/100.`;
                         } else if (dimension.subject === 'Overall Citations') {
                           componentData = componentScores.citations;
-                          weight = '25%';
+                          weight = '50%';
                           explanation = `${candidate.totalCitations} total citations scores ${Math.round(dimension.value)}/100. ${componentData.explanation}`;
                         }
                         
@@ -263,11 +263,11 @@ export function CandidateProfile({ candidate }: CandidateProfileProps) {
                         <div>
                           <span className="font-medium text-slate-700">Final Calculation:</span> 
                           <span className="font-mono text-xs ml-1">
-                            ({Math.round(candidate.radarData.find(d => d.subject === 'Overall Citations')?.value || 0)} × 25%) + 
-                            ({Math.round(candidate.radarData.find(d => d.subject === 'Publication Volume')?.value || 0)} × 25%) + 
-                            ({Math.round(candidate.radarData.find(d => d.subject === 'Top Venue Presence')?.value || 0)} × 20%) + 
-                            ({Math.round(candidate.radarData.find(d => d.subject === 'First Author Impact')?.value || 0)} × 15%) + 
-                            ({Math.round(candidate.radarData.find(d => d.subject === 'Hot Topic Citations')?.value || 0)} × 15%)
+                            ({Math.round(candidate.radarData.find(d => d.subject === 'Overall Citations')?.value || 0)} × 50%) + 
+                            ({Math.round(candidate.radarData.find(d => d.subject === 'Publication Volume')?.value || 0)} × 10%) + 
+                            ({Math.round(candidate.radarData.find(d => d.subject === 'Top Venue Presence')?.value || 0)} × 10%) + 
+                            ({Math.round(candidate.radarData.find(d => d.subject === 'First Author Impact')?.value || 0)} × 5%) + 
+                            ({Math.round(candidate.radarData.find(d => d.subject === 'Hot Topic Citations')?.value || 0)} × 25%)
                           </span>
                         </div>
                         <div>
@@ -503,7 +503,7 @@ export function CandidateProfile({ candidate }: CandidateProfileProps) {
           
           <div className="space-y-5">
             {candidate.publications.map((pub, index) => (
-              <div key={pub.id} className="group">
+              <div key={`${pub.id}-${index}`} className="group">
                 <div className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-200">
                   <div className="space-y-3">
                     <h3 className="font-medium leading-snug text-slate-800 group-hover:text-slate-900">

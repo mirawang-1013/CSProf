@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
-import { MessageCircle, Send, Bot, User } from "lucide-react";
+import { MessageCircle, Send, Bot, User, Loader2 } from "lucide-react";
+import { generateChatResponse } from "../api/chat";
 
 interface Publication {
   id: string;
@@ -16,7 +17,7 @@ interface Publication {
   type: 'conference' | 'journal' | 'workshop';
 }
 
-interface Candidate {
+export interface Candidate {
   id: string;
   name: string;
   university: string;
@@ -81,97 +82,55 @@ export function CandidateChat({ candidate }: CandidateChatProps) {
     }
   ]);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const generateResponse = (question: string): string => {
-    const lowerQuestion = question.toLowerCase();
-    
-    // Research areas questions
-    if (lowerQuestion.includes('research') || lowerQuestion.includes('area') || lowerQuestion.includes('focus')) {
-      return `${candidate.name}'s research primarily focuses on ${candidate.researchAreas.join(', ')}. ${candidate.analysis.researchSummary}`;
-    }
-    
-    // Publication quality questions
-    if (lowerQuestion.includes('publication') || lowerQuestion.includes('venue') || lowerQuestion.includes('conference') || lowerQuestion.includes('journal')) {
-      if (candidate.publications.length === 0) {
-        return `${candidate.name} is still building their publication record, and we don't have specific papers on file yet. Their profile emphasizes ${candidate.researchAreas.join(', ')} and ${candidate.totalCitations} total citations so far.`;
-      }
-      const topPub = candidate.publications.reduce((prev, current) => 
-        (prev.citations > current.citations) ? prev : current
-      );
-      const venues = candidate.publications.map(p => p.venue);
-      const conferenceCount = candidate.publications.filter(p => p.type === 'conference').length;
-      const journalCount = candidate.publications.filter(p => p.type === 'journal').length;
-      
-      return `${candidate.name} has published ${candidate.publications.length} papers (${conferenceCount} conference, ${journalCount} journal). Their most cited work "${topPub.title}" has ${topPub.citations} citations and was published in ${topPub.venue}. They've published in venues like ${venues.slice(0, 3).join(', ')}, indicating strong publication quality.`;
-    }
-    
-    // Machine Learning fit questions
-    if (lowerQuestion.includes('machine learning') || lowerQuestion.includes('ml') || lowerQuestion.includes('ai')) {
-      const mlMatch = candidate.researchAreas.some(area => 
-        area.toLowerCase().includes('machine learning') || 
-        area.toLowerCase().includes('artificial intelligence') ||
-        area.toLowerCase().includes('deep learning')
-      );
-      
-      if (mlMatch) {
-        return `Yes, ${candidate.name} would be an excellent fit for ML roles! They have direct experience in ${candidate.researchAreas.filter(area => 
-          area.toLowerCase().includes('machine') || 
-          area.toLowerCase().includes('learning') || 
-          area.toLowerCase().includes('ai')
-        ).join(', ')}. Their ranking score of ${candidate.rankingScore}/100 reflects strong technical capabilities.`;
-      } else {
-        return `While ${candidate.name}'s primary focus is on ${candidate.researchAreas[0]}, they may still be suitable for ML roles depending on the specific requirements. Their technical background in ${candidate.researchAreas.join(', ')} could bring valuable interdisciplinary perspectives to ML teams.`;
-      }
-    }
-    
-    // Citation/metrics questions
-    if (lowerQuestion.includes('citation') || lowerQuestion.includes('metric') || lowerQuestion.includes('impact') || lowerQuestion.includes('h-index')) {
-      if (candidate.publications.length === 0) {
-        return `${candidate.name} currently has ${candidate.totalCitations} total citations and an h-index of ${candidate.hIndex}. As new publications are recorded, we'll be able to share more detailed citation averages.`;
-      }
-      const avgCitations = Math.round(candidate.totalCitations / candidate.publications.length);
-      return `${candidate.name} has strong research metrics: ${candidate.totalCitations} total citations (${avgCitations} avg per paper), h-index of ${candidate.hIndex}. ${candidate.analysis.scoreExplanation.breakdown.citations.explanation} This places them in the ${candidate.rankingScore >= 85 ? 'top tier' : candidate.rankingScore >= 70 ? 'strong' : 'solid'} category of PhD graduates.`;
-    }
-    
-    // Strengths/standout questions
-    if (lowerQuestion.includes('stand out') || lowerQuestion.includes('strength') || lowerQuestion.includes('special') || lowerQuestion.includes('unique')) {
-      const topStrengths = candidate.analysis.keyStrengths.slice(0, 3);
-      return `${candidate.name} stands out for several reasons: ${topStrengths.join('; ')}. With a ranking score of ${candidate.rankingScore}/100, they demonstrate ${candidate.rankingScore >= 90 ? 'exceptional' : candidate.rankingScore >= 80 ? 'strong' : 'solid'} research capabilities and potential.`;
-    }
-    
-    // Hiring fit questions
-    if (lowerQuestion.includes('hire') || lowerQuestion.includes('recruit') || lowerQuestion.includes('fit') || lowerQuestion.includes('suitable')) {
-      const strengths = candidate.analysis.keyStrengths.slice(0, 2).join(' and ');
-      const concerns = candidate.analysis.potentialConcerns.length > 0 
-        ? ` However, consider that ${candidate.analysis.potentialConcerns[0].toLowerCase()}.`
-        : '';
-      
-      return `${candidate.name} could be a strong hire based on their ${strengths.toLowerCase()}. They bring expertise in ${candidate.researchAreas.slice(0, 2).join(' and ')} with a solid publication record.${concerns} I'd recommend discussing specific role requirements to assess the best fit.`;
-    }
-    
-    // Default response
-    return `That's an interesting question about ${candidate.name}. Based on their profile, they have expertise in ${candidate.researchAreas.join(', ')}, with ${candidate.publications.length} publications and ${candidate.totalCitations} citations. Their ranking score is ${candidate.rankingScore}/100. Is there a specific aspect of their background you'd like me to elaborate on?`;
-  };
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-
+    const userMessageContent = inputValue.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue,
+      content: userMessageContent,
       timestamp: new Date()
     };
 
-    const botResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      type: 'bot',
-      content: generateResponse(inputValue),
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage, botResponse]);
+    // Add user message immediately
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputValue('');
+    setIsLoading(true);
+
+    try {
+      // Convert messages to GPT format (including the user message we just added)
+      const conversationMessages = updatedMessages.map(msg => ({
+        role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.content
+      }));
+
+      // Generate response using GPT API
+      const response = await generateChatResponse(conversationMessages, candidate);
+
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: response,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please make sure your OpenAI API key is configured correctly.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSuggestedQuestion = (question: string) => {
@@ -186,8 +145,8 @@ export function CandidateChat({ candidate }: CandidateChatProps) {
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="max-h-[600px] flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-indigo-600" />
           Ask about {candidate.name}
@@ -197,9 +156,9 @@ export function CandidateChat({ candidate }: CandidateChatProps) {
         </p>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col space-y-4">
+      <CardContent className="flex-1 flex flex-col space-y-4 min-h-0">
         {/* Suggested Questions */}
-        <div className="space-y-2">
+        <div className="space-y-2 flex-shrink-0">
           <p className="text-xs font-medium text-muted-foreground">Suggested questions:</p>
           <div className="flex flex-wrap gap-2">
             {SUGGESTED_QUESTIONS.map((question, index) => (
@@ -244,25 +203,48 @@ export function CandidateChat({ candidate }: CandidateChatProps) {
                 )}
               </div>
             ))}
+            {isLoading && (
+              <div className="flex gap-3 justify-start">
+                <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-indigo-600" />
+                </div>
+                <div className="bg-slate-100 text-slate-900 rounded-lg px-4 py-3 text-sm">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+                    <span className="font-medium">Thinking...</span>
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
         {/* Input */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask about their research, publications, fit..."
             className="flex-1"
+            disabled={isLoading}
           />
           <Button 
             onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || isLoading}
             size="sm"
             className="bg-indigo-600 hover:bg-indigo-700"
           >
-            <Send className="h-4 w-4" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </CardContent>

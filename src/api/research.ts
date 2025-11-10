@@ -165,7 +165,10 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
           ? (rawType as UIPublication["type"])
           : "conference";
 
-      const publication: UIPublication = {
+      // Store paper_id if available for deduplication
+      const paperId = (pub as any).paper_id;
+      
+      const publication: UIPublication & { paper_id?: string } = {
         id: pub.id,
         title: (pub as any).title ?? "Untitled",
         authors: normalizedAuthors,
@@ -173,6 +176,7 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
         year: typeof (pub as any).year === "number" ? (pub as any).year : 0,
         citations: typeof (pub as any).citations === "number" ? (pub as any).citations : 0,
         type: normalizedType,
+        ...(paperId ? { paper_id: paperId } : {}),
       };
 
       const candidateId = (pub as any).candidate_id ?? null;
@@ -181,8 +185,62 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
       publicationsByCandidate[candidateId].push(publication);
     });
 
+    // Deduplicate publications for each candidate
+    // This handles cases where the same paper might appear multiple times in the database
+    // (e.g., same title+venue+year but different database IDs)
     for (const key of Object.keys(publicationsByCandidate)) {
-      publicationsByCandidate[key].sort((a, b) => {
+      const publications = publicationsByCandidate[key];
+      
+      // Create a function to generate a unique key for a publication
+      const getUniqueKey = (pub: UIPublication & { paper_id?: string }): string => {
+        // First, try to use paper_id if available (most reliable)
+        const paperId = (pub as any).paper_id;
+        if (paperId && String(paperId).trim()) {
+          return `paper_id:${String(paperId).trim().toLowerCase()}`;
+        }
+        
+        // Fallback: use normalized title + venue + year as unique key
+        // Normalize: lowercase, trim, collapse multiple spaces to single space
+        // Keep punctuation to preserve uniqueness (e.g., "A-B" vs "A B")
+        const normalizedTitle = (pub.title || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        const normalizedVenue = (pub.venue || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        const year = pub.year || 0;
+        return `content:${normalizedTitle}|${normalizedVenue}|${year}`;
+      };
+      
+      // Use a Map to track unique publications by their unique key
+      const uniquePubsMap = new Map<string, UIPublication & { paper_id?: string }>();
+      
+      for (const pub of publications) {
+        const uniqueKey = getUniqueKey(pub);
+        
+        // If we haven't seen this publication before, add it
+        if (!uniquePubsMap.has(uniqueKey)) {
+          uniquePubsMap.set(uniqueKey, pub);
+        } else {
+          // If we've seen it, keep the one with more citations or better data
+          const existing = uniquePubsMap.get(uniqueKey)!;
+          const existingCitations = existing.citations || 0;
+          const currentCitations = pub.citations || 0;
+          
+          if (currentCitations > existingCitations) {
+            // Current has more citations, replace it
+            uniquePubsMap.set(uniqueKey, pub);
+          } else if (currentCitations === existingCitations) {
+            // Same citations, prefer the one with paper_id
+            const existingPaperId = (existing as any).paper_id;
+            const currentPaperId = (pub as any).paper_id;
+            if (currentPaperId && !existingPaperId) {
+              uniquePubsMap.set(uniqueKey, pub);
+            }
+            // Otherwise keep the existing one
+          }
+          // If current has fewer citations, keep the existing one
+        }
+      }
+      
+      // Convert to array and sort by year (descending) and citations (descending)
+      publicationsByCandidate[key] = Array.from(uniquePubsMap.values()).sort((a, b) => {
         if (a.year !== b.year) return b.year - a.year;
         return b.citations - a.citations;
       });
@@ -219,11 +277,17 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
       return acc;
     }, null);
 
-    const overallCitations = Math.min(100, (row.total_citations ?? 0) / 20);
+    // Adjusted scoring: Ensure 50+ citations results in 60+ total score
+    // More generous citation scoring to reward research impact
+    const totalCitations = row.total_citations ?? 0;
+    // Linear scaling: 50 citations -> 80 points, 67 citations -> 100 points (capped)
+    // Formula ensures 50 citations gives sufficient base score
+    const overallCitations = Math.min(100, Math.round(totalCitations * 1.6));
     const publicationVolume = Math.min(100, publicationCount * 12);
     const topVenuePresence = Math.min(100, topVenueCount * 25);
     const firstAuthorImpact = Math.min(100, Math.round((row.h_index ?? 0) * 5));
-    const hotTopicCitations = Math.min(100, Math.round((row.total_citations ?? 0) * 0.1));
+    // Hot topic citations: generous scaling (50 citations -> 40 points)
+    const hotTopicCitations = Math.min(100, Math.round(totalCitations * 0.8));
 
     const radarData = [
       { subject: "Overall Citations", value: overallCitations, fullMark: 100 },
@@ -233,13 +297,23 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
       { subject: "Hot Topic Citations", value: hotTopicCitations, fullMark: 100 },
     ];
 
+    // Adjusted weights: Citations heavily weighted (75% total) to ensure 50+ citations = 60+ score
+    // Calculation for 50 citations (worst case, all other metrics = 0):
+    // overallCitations (80) * 0.50 + hotTopicCitations (40) * 0.25 = 40 + 10 = 50
+    // But with realistic minimums (e.g., 1 publication = 12 * 0.10 = 1.2, h-index 1 = 5 * 0.05 = 0.25)
+    // Total would be ~51-52, still not enough. Need to ensure citations alone can reach 60.
+    // Final adjustment: Citations account for 70% of score to guarantee 50 citations = 60+ score
     const totalScore = Math.round(
-      overallCitations * 0.25 +
-        publicationVolume * 0.25 +
-        topVenuePresence * 0.2 +
-        firstAuthorImpact * 0.15 +
-        hotTopicCitations * 0.15
+      overallCitations * 0.50 +      // 50% weight
+        publicationVolume * 0.10 +     // 10% weight
+        topVenuePresence * 0.10 +      // 10% weight
+        firstAuthorImpact * 0.05 +     // 5% weight
+        hotTopicCitations * 0.25       // 25% weight (citations total = 75%)
     );
+    
+    // Ensure minimum score of 60 for candidates with 50+ citations
+    // This guarantees the requirement that 50+ citations = 60+ score
+    const finalScore = totalCitations >= 50 ? Math.max(totalScore, 60) : totalScore;
 
     const primaryResearchAreas = Array.isArray(row.research_interests) ? row.research_interests : [];
     const focusAreasSummary = primaryResearchAreas.length > 0 ? primaryResearchAreas.slice(0, 3).join(", ") : "Not specified";
@@ -260,7 +334,7 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
           ? ` Notable work: "${mostCitedPublication.title}" (${mostCitedPublication.venue}, ${mostCitedPublication.citations} citations).`
           : ""),
       scoreExplanation: {
-        totalScore,
+        totalScore: finalScore,
         breakdown: {
           citations: { score: Math.round(overallCitations), explanation: "Citations relative to peers." },
           hIndex: { score: Math.round(firstAuthorImpact), explanation: "H-index based impact." },
@@ -274,8 +348,8 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
 
     const candidate: UICandidate = {
       id: row.id,
-      name: row.name,
-      university: uni.name,
+      name: row.name || 'Unknown',
+      university: uni.name?.trim() || 'University information not available',
       department: "Computer Science",
       advisor: "",
       researchAreas: primaryResearchAreas,
@@ -287,7 +361,7 @@ export async function fetchUniversitiesWithCandidates(filters: SearchFilters): P
       email: "",
       website: row.google_scholar_url || row.linkedin_url || undefined,
       radarData,
-      rankingScore: computeRankingScore(row.total_citations ?? 0, row.h_index ?? 0),
+      rankingScore: finalScore, // Use the same score as totalScore for consistency
       analysis,
     };
 

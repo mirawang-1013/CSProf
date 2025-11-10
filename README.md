@@ -8,6 +8,7 @@ A unified web application that combines PhD Graduate Search and University Compa
 - **Advanced Search & Filtering**: Search PhD graduates by university, graduation year, citation count, and research topics
 - **Interactive University List**: Browse candidates organized by university with real-time filtering
 - **Detailed Candidate Profiles**: View comprehensive profiles including research interests, publications, and academic achievements
+- **AI-Powered Chat**: Ask questions about candidates using GPT-powered chat with context-aware responses
 - **Percentile Filtering**: Filter candidates by top percentile performance (top 1%, 5%, 10%, etc.)
 - **Real-time Search**: Instant filtering as you type with preserved selection state
 
@@ -29,6 +30,7 @@ A unified web application that combines PhD Graduate Search and University Compa
 - **Styling**: Tailwind CSS
 - **Charts**: Recharts for data visualization
 - **Icons**: Lucide React
+- **AI Integration**: OpenAI GPT API for chat functionality
 - **State Management**: React hooks (useState, useEffect, useCallback)
 
 ## 📦 Installation
@@ -44,12 +46,20 @@ A unified web application that combines PhD Graduate Search and University Compa
    npm install
    ```
 
-3. **Start the development server**
+3. **Set up environment variables**
+   Create a `.env` file in the root directory and add your OpenAI API key:
+   ```bash
+   VITE_OPENAI_API_KEY=your_openai_api_key_here
+   ```
+   
+   **Note**: You can get an API key from [OpenAI](https://platform.openai.com/api-keys). The chat feature requires this key to function.
+
+4. **Start the development server**
    ```bash
    npm run dev
    ```
 
-4. **Open your browser**
+5. **Open your browser**
    Navigate to `http://localhost:3000` (or the port shown in your terminal)
 
 ## 🏗️ Project Structure
